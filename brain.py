@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
 from pymongo.collation import Collation
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required, current_user
 import json
 from bson.json_util import dumps
+
+
 
 app = Flask(__name__)
 
@@ -17,6 +19,11 @@ client = MongoClient(
 users = client.financialApp.users
 
 
+@login_manager.user_loader
+def load_user(user_id):
+    return users.find_one( {"_id": user_id})
+
+
 @app.route('/login', methods=["POST"])
 def login():
     email = request.json['email']
@@ -26,8 +33,8 @@ def login():
         "email": email
     })
     if check_password_hash(user['senha'], senha):
-        userinfos = json.loads(dumps(user))
-        return userinfos['nome']
+        session = json.loads(dumps(user))
+        return redirect('/protegida')
     else:
         return {
             "mensagem": "senha não confere"
@@ -52,6 +59,15 @@ def inserir_usuario():
     return {
         "mensagem": "usuário inserido"
     }
+
+@app.route('/protegida')
+@login_required
+def protegida():
+
+    if current_user.is_autenticated:
+        return "tudo bem"
+    else:
+        return "nao está autenticado"
 
 
 if __name__ == "__main__":
