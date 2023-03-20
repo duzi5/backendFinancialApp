@@ -5,7 +5,6 @@ from pymongo.collation import Collation
 from flask_login import LoginManager, login_required, current_user
 import json
 from bson.json_util import dumps
-from model_mongodb import User
 
 
 app = Flask(__name__)
@@ -19,9 +18,10 @@ client = MongoClient(
 
 users = client.financialApp.users
 
+
 @login_manager.user_loader
 def load_user(user_id):
-    return users.find_one( {"_id": user_id})
+    return users.find_one({"_id": user_id})
 
 
 @app.route('/login', methods=["POST"])
@@ -60,6 +60,7 @@ def inserir_usuario():
         "mensagem": "usuário inserido"
     }
 
+
 @app.route('/protegida')
 @login_required
 def protegida():
@@ -70,12 +71,8 @@ def protegida():
         return "nao está autenticado"
 
 
-
 # @app.route('/inserir movimento')
 # @login_required
-
-
-
 
 
 if __name__ == "__main__":
