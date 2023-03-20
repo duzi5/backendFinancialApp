@@ -5,7 +5,7 @@ from pymongo.collation import Collation
 from flask_login import LoginManager, login_required, current_user
 import json
 from bson.json_util import dumps
-
+from model_mongodb import User
 
 
 app = Flask(__name__)
@@ -16,8 +16,8 @@ login_manager.init_app(app)
 
 client = MongoClient(
     "mongodb+srv://desenvolvedor:desenvolvedor@financialapp.wwdb8xz.mongodb.net/?retryWrites=true&w=majority")
-users = client.financialApp.users
 
+users = client.financialApp.users
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -68,6 +68,14 @@ def protegida():
         return "tudo bem"
     else:
         return "nao está autenticado"
+
+
+
+# @app.route('/inserir movimento')
+# @login_required
+
+
+
 
 
 if __name__ == "__main__":
