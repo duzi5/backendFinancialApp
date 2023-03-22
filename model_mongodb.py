@@ -76,3 +76,23 @@ class User(UserMixin, client.Document):
 
     def save_to_mongo(self):
         client.insert("users", self.json())
+
+
+class Family(client.Document):
+    meta = {'collection': 'users'}
+    renda_total = client.IntegerField(default=0)
+    categorias_ids = client.StringField(default='')
+    membros_ids = client.StringField(default='')
+    begin_datetime = client.DateTimeField(default=datetime.now())
+    last_activity = client.DateTimeField(default=datetime.now())
+
+class Category(client.Document):
+    meta={'collection' : 'categorias'}
+    descricao = client.StringField(default='')
+    imagem_url = client.StringField(default='')
+
+class Move(client.Document):
+    meta = {'collection' : 'moves'}
+    natureza = client.BooleanField()
+    valor = client.IntegerField()
+    usuario_id = client.IntegerField()

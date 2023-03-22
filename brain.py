@@ -5,12 +5,22 @@ from pymongo.collation import Collation
 from flask_login import LoginManager, login_required, current_user
 import json
 from bson.json_util import dumps
+from functools import wraps
+import jwt
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
+import os
+from flask_cors import CORS
 
 
 app = Flask(__name__)
+app.config['JWT_SECRET_KEY'] = "dsfdfasdfsdfsdfsdfsd"
 
-login_manager = LoginManager()
-login_manager.init_app(app)
+
+jwt = JWTManager(app)
+    
+
+
+cors = CORS(app)
 
 
 client = MongoClient(
@@ -18,43 +28,50 @@ client = MongoClient(
 
 users = client.financialApp.users
 
-
-@login_manager.user_loader
-def load_user(user_id):
-    return users.find_one({"_id": user_id})
+@app.route('/')
+def home():
+    return{
+        "message": "A home ainda não foi construída"
+    }
 
 
 @app.route('/login', methods=["POST"])
 def login():
     email = request.json['email']
-    senha = request.json['senha']
+    password = request.json['password']
 
     user = users.find_one({
         "email": email
     })
-    if check_password_hash(user['senha'], senha):
-        session = json.loads(dumps(user))
-        return redirect('/protegida')
+    if check_password_hash(user['password'], password):
+        access_token = create_access_token(identity=email)
+        response = jsonify(access_token=access_token)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
     else:
         return {
-            "mensagem": "senha não confere"
+            "message": "password não confere"
         }
 
 
 @app.route('/inserirUsuario', methods=["POST"])
 def inserir_usuario():
-    nome = request.json['nome']
-    sobrenome = request.json['sobrenome']
-    data_nascimento = request.json['data_nascimento']
+    name = request.json['name']
+    last_name  = request.json['last_name']
+    birth_day = request.json['birth_day']
     email = request.json['email']
-    senha = request.json['senha']
+    password = request.json['password']
+    family = request.json['family']
+
 
     users.insert_one({
-        "nome": nome,
-        "sobrenome": sobrenome,
-        "data_nascimento": data_nascimento,
+        "name": name,
+        "last_name": last_name,
+        "birth_day": birth_day,
         "email": email,
-        "senha": generate_password_hash(senha)
+        'family': family,
+        "password": generate_password_hash(password),
+
     })
     return {
         "mensagem": "usuário inserido"
@@ -62,19 +79,16 @@ def inserir_usuario():
 
 
 @app.route('/protegida')
-@login_required
+@jwt_required()
 def protegida():
+    msg = {
+        "message":"Você chegou aqui"
+    }
+    return(msg)
 
-    if current_user.is_autenticated:
-        return "tudo bem"
-    else:
-        return "nao está autenticado"
 
-
-# @app.route('/inserir movimento')
-# @login_required
 
 
 if __name__ == "__main__":
 
-    app.run(port=3000, debug=True)
+    app.run(port=5000, debug=True)
