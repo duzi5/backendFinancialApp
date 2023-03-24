@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect
+from flask import Flask, render_template, request, jsonify, redirect, Blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
 from pymongo.collation import Collation
@@ -85,6 +85,8 @@ def protegida():
         "message":"Você chegou aqui"
     }
     return(msg)
+
+
 
 
 

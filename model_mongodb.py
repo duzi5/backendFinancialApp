@@ -86,6 +86,8 @@ class Family(client.Document):
     begin_datetime = client.DateTimeField(default=datetime.now())
     last_activity = client.DateTimeField(default=datetime.now())
 
+
+
 class Category(client.Document):
     meta={'collection' : 'categorias'}
     descricao = client.StringField(default='')
@@ -96,3 +98,14 @@ class Move(client.Document):
     natureza = client.BooleanField()
     valor = client.IntegerField()
     usuario_id = client.IntegerField()
+    family_id = client.IntegerField()
+
+class PaymentMethod(client.Document):
+    meta = {'collection' : 'paymentMethods'}
+    name = client.IntegerField()
+    image_url = client.StringField(default='')
+
+class Meta(client.Document):
+    meta = {'collection': 'metas'}
+    title = client.StringField()
+    family_id = client.IntegerField()
