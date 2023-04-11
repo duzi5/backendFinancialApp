@@ -1,96 +1,63 @@
-from flask import Flask, render_template, request, jsonify, redirect, Blueprint
-from werkzeug.security import generate_password_hash, check_password_hash
-from pymongo import MongoClient
-from pymongo.collation import Collation
-from flask_login import LoginManager, login_required, current_user
-import json
-from bson.json_util import dumps
-from functools import wraps
-import jwt
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
-import os
-from flask_cors import CORS
+from authlib.integrations.flask_client import OAuth
+from flask import Flask, redirect, url_for, request, jsonify
+from db import mongo
+
 
 
 app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = "dsfdfasdfsdfsdfsdfsd"
+app.config["MONGO_URI"] = "mongodb+srv://duzis:duzis@financialapp.wwdb8xz.mongodb.net/?retryWrites=true&w=majority"
+#
+
+# Inicialize o PyMongo
+mongo.init_app(app)
+
+# Importe e registre os blueprints
 
 
-jwt = JWTManager(app)
-    
-
-
-cors = CORS(app)
-
-
-client = MongoClient(
-    "mongodb+srv://desenvolvedor:desenvolvedor@financialapp.wwdb8xz.mongodb.net/?retryWrites=true&w=majority")
-
-users = client.financialApp.users
-
-@app.route('/')
-def home():
-    return{
-        "message": "A home ainda não foi construída"
-    }
-
-
-@app.route('/login', methods=["POST"])
-def login():
-    email = request.json['email']
-    password = request.json['password']
-
-    user = users.find_one({
-        "email": email
-    })
-    if check_password_hash(user['password'], password):
-        access_token = create_access_token(identity=email)
-        response = jsonify(access_token=access_token)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
-    else:
-        return {
-            "message": "password não confere"
-        }
-
-
-@app.route('/inserirUsuario', methods=["POST"])
-def inserir_usuario():
-    name = request.json['name']
-    last_name  = request.json['last_name']
-    birth_day = request.json['birth_day']
-    email = request.json['email']
-    password = request.json['password']
-    family = request.json['family']
-
-
-    users.insert_one({
-        "name": name,
-        "last_name": last_name,
-        "birth_day": birth_day,
-        "email": email,
-        'family': family,
-        "password": generate_password_hash(password),
-
-    })
-    return {
-        "mensagem": "usuário inserido"
-    }
-
-
-@app.route('/protegida')
-@jwt_required()
-def protegida():
-    msg = {
-        "message":"Você chegou aqui"
-    }
-    return(msg)
+app.register_blueprint(user_blueprint, url_prefix="/api/users")
+from blueprints.users import user_blueprint
+# from blueprints.families import family_blueprint
+# from blueprints.financial_movements import financial_movements_blueprint
+# from blueprints.goals import goals_blueprint
 
 
 
 
 
+# app.register_blueprint(family_blueprint, url_prefix="/api/families")
+# app.register_blueprint(financial_movements_blueprint, url_prefix="/api/financial_movements")
+# app.register_blueprint(goals_blueprint, url_prefix="/api/goals")
+
+# Configuração do OAuth
+app.config["GOOGLE_CLIENT_ID"] = "your_google_client_id"
+app.config["GOOGLE_CLIENT_SECRET"] = "your_google_client_secret"
+app.config["GOOGLE_REDIRECT_URI"] = "http://localhost:5000/dashboard"
+
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id=app.config["GOOGLE_CLIENT_ID"],
+    client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+    access_token_url="https://accounts.google.com/o/oauth2/token",
+    access_token_params=None,
+    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    authorize_params=None,
+    api_base_url="https://www.googleapis.com/oauth2/v1/",
+    userinfo_endpoint="https://openidconnect.googleapis.com/v1/userinfo",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+@app.route("/auth")
+def auth():
+    redirect_uri = url_for("auth_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route("/auth/callback")
+def auth_callback():
+    token = google.authorize_access_token()
+    user_info = google.parse_id_token(token)
+    # Salve as informações do usuário no banco de dados MongoDB
+    return jsonify(user_info)
 
 if __name__ == "__main__":
-
-    app.run(port=5000, debug=True)
+    app.run(debug=True)
