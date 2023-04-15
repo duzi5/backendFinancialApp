@@ -3,10 +3,9 @@ from bson.objectid import ObjectId
 from datetime import datetime
 from db import mongo
 from flask_jwt_extended import jwt_required
-from flask_cors import CORS
+
 
 moves_blueprint = Blueprint("moves", __name__)
-CORS(moves_blueprint, origins=["http://localhost:3000"], supports_credentials=True)
 
 db = mongo.Financial
 moves = db["moves"]

@@ -33,9 +33,19 @@ app.register_blueprint(payment_methods, url_prefix="/payment_methods")
 app.register_blueprint(goals_bp, url_prefix="/goals")
 app.register_blueprint(moves_blueprint, url_prefix="/moves")
 app.register_blueprint(family_bp, url_prefix="/families")
+CORS(user_blueprint)
+CORS(payment_methods)
+CORS(goals_bp)
+CORS(moves_blueprint)
+CORS(family_bp)
 
 
-users_collection = mongo.db.users
+
+
+
+
+
+users_collection = mongo.Financial.users
 
 
 def generate_access_token(user):
@@ -73,20 +83,18 @@ def admin_required(func):
 
 @app.route("/create", methods=["POST"])
 def create_user():
+    print(request.json)
     existing_user = users_collection.find_one({"email": request.json["email"]})
     if existing_user:
         return jsonify({"error": "User with this email already exists"}), 400
 
-    if request.json["password"] != request.json["confirmPassword"]:
-        return jsonify({"error": "Passwords do not match"}), 400
 
     user = request.json
     user["password"] = generate_password_hash(request.json["password"])
     user["email"] = request.json["email"]
     user["name"] = request.json["name"]
 
-    # Remover o campo confirmPassword antes de inserir o usuário no banco de dados
-    del user["confirmPassword"]
+
 
     user["is_consultor"] = False
     user["is_manager"] = False

@@ -3,9 +3,13 @@ from datetime import datetime
 from db import mongo
 from bson.objectid import ObjectId
 
+
 family_bp = Blueprint('family_bp', __name__)
 
 family_collection = mongo.Financial.families
+
+
+
 
 @family_bp.route('/family', methods=['POST'])
 def create_family():

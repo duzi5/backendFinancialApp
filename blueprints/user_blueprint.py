@@ -15,7 +15,6 @@ user_blueprint = Blueprint("users", __name__)
 db = mongo.Financial
 users_collection = db["users"]
 
-
 UPLOAD_FOLDER = 'imagens/avatars'
 
 
@@ -25,7 +24,7 @@ UPLOAD_FOLDER = 'imagens/avatars'
 @jwt_required
 @user_blueprint.route('/all', methods=['GET'])
 def get_users():
-    users_cursor = mongo.db.users.find()
+    users_cursor = mongo.Financial.users.find()
     users = [user for user in users_cursor]
 
     response = jsonify(users)
@@ -55,7 +54,7 @@ def get_user(user_id):
 @jwt_required
 @user_blueprint.route("/", methods=["PUT"])
 def update_user(user_id):
-    users = mongo.db.users
+    users = mongo.Financial.users
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -77,7 +76,7 @@ def update_user(user_id):
 @jwt_required
 @user_blueprint.route("/", methods=["DELETE"])
 def delete_user(user_id):
-    users = mongo.db.users
+    users = mongo.Financial.users
     result = users.delete_one({"_id": ObjectId(user_id)})
     if result.deleted_count == 0:
         return jsonify({"error": "User not found"}), 404
