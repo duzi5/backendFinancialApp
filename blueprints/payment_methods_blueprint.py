@@ -24,6 +24,7 @@ def get_payment_methods():
         result.append({
         "_id": str(payment_method["_id"]),
         "type": payment_method["type"],
+        "name": payment_method["name"],
         "brand": payment_method["brand"],
         "bank": payment_method["bank"],
         "best_purchase_day": payment_method["best_purchase_day"],
@@ -56,6 +57,7 @@ def add_payment_method():
         "_id": ObjectId(),
         "type": data["type"],
         "brand": data["brand"],
+        "name": data["name"],
         "bank": data["bank"],
         "best_purchase_day": data.get("best_purchase_day", ""),
         "due_date": data.get("due_date", ""),
@@ -106,3 +108,4 @@ def delete_payment_method(id):
     )
 
     return jsonify({"message": "Payment method deleted successfully"})
+
