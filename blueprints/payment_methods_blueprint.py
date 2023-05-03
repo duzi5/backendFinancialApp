@@ -9,6 +9,24 @@ payment_methods = Blueprint("payment_methods", __name__)
 
 from bson import ObjectId
 
+@payment_methods.route('/<family_id>/<payment_method_id>', methods=['GET'])
+def get_payment_method(family_id, payment_method_id):
+    family = mongo.Fiancial.families.find_one({'_id': ObjectId(family_id)})
+    if not family:
+        return jsonify({'error': 'Família não encontrada'}), 404
+
+    payment_method = next(
+        (method for method in family['payment_methods'] if method['_id'] == ObjectId(payment_method_id)),
+        None
+    )
+    if not payment_method:
+        return jsonify({'error': 'Método de pagamento não encontrado'}), 404
+
+    return jsonify(payment_method), 200
+
+
+
+
 @payment_methods.route("/payment_methods", methods=["GET"])
 @jwt_required()
 def get_payment_methods():

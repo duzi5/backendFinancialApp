@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 
 family_bp = Blueprint('family_bp', __name__)
 
+moves_collection = mongo.Financial.moves
 family_collection = mongo.Financial.families
 
 
