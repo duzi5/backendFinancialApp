@@ -3,7 +3,8 @@ from bson.objectid import ObjectId
 from datetime import datetime
 from db import mongo
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timedelta
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 
 moves_blueprint = Blueprint("moves", __name__)
@@ -16,7 +17,7 @@ def get_month_options(user_id):
     moves_collection = mongo.Financial.moves
     month_options = moves_collection.aggregate([
         {"$match": {"user_id": user_id}},
-        {"$group": {"_id": "$reference_month_year"}}
+        {"$group": {"_id": "reference_month_year"}}
     ])
     return [month_option["_id"] for month_option in month_options]
 
@@ -41,6 +42,7 @@ def get_moves_by_month(referenceMonth):
     # Filtrar os movimentos pelo mês de referência
     filtered_moves = []
     for move in moves:
+        print(move)
         if move['reference_month_year'] == referenceMonth:
             filtered_moves.append(move)
 
@@ -135,6 +137,8 @@ def get_moves_by_month(reference_month):
     return jsonify(moves)
 
 
+
+
 @moves_blueprint.route("/add_move", methods=["POST"])
 @jwt_required()
 def add_move():
@@ -146,33 +150,44 @@ def add_move():
     family = mongo.Financial.families.find_one({"name": family_name})
     family_id = family["_id"]
 
-    move_data["is_reserve"] = False
+    if move_data.get("reserve", False):
+        balance_goals = move_data.get("balance_goals", [])
+        for goal in balance_goals:
+            if goal.get("payment_method") is None or goal.get("value") is None:
+                return jsonify({"message": "Os campos 'payment_method' e 'value' são obrigatórios para adicionar metas."}), 400
+
+        move_data["reserve"] = True
+        move_data["balance_goals"] = balance_goals
+    else:
+        move_data["reserve"] = False
+        move_data.pop("balance_goals", None)
 
     if "installments" in move_data and move_data["installments"] > 1:
-
         moves = []
         installment_info = move_data.pop("installment_info")
+        date = datetime.strptime(move_data["date"], "%Y-%m-%d")
 
         for i in range(move_data["installments"]):
+            installment_date = date + relativedelta(months=1 * i)
             installment_data = {
                 "description": move_data["description"],
                 "value": move_data["value"] / move_data["installments"],
                 "nature": move_data["nature"],
                 "category": move_data["category"],
                 "payment_method": move_data["payment_method"],
-                "date": datetime.strptime(move_data["date"], "%Y-%m-%d") + relativedelta(months=i),
-                "installment_info": f"{i+1}/{move_data['installments']}",
+                "date": installment_date.strftime("%Y-%m-%d"),
+                "installment_info": f"{i+1}-{move_data['installments']}",
                 "family_id": family_id,
-                "reserve": move_data["reserve"]
+                "reserve": move_data["reserve"],
+                "reference_month_year": f"{installment_date.month}-{installment_date.year}"
             }
             moves.append(installment_data)
 
         mongo.Financial.moves.insert_many(moves)
+        return jsonify({"message": "Movimentação adicionada com sucesso"}), 201
     else:
-        move_data["date"] = datetime.strptime(
-            move_data["date"], "%Y-%m-%d")
+        move_data["date"] = datetime.strptime(move_data["date"], "%Y-%m-%d")
         move_data["family_id"] = family_id
-
+        move_data["reference_month_year"] = f"{move_data['date'].month}-{move_data['date'].year}"
         mongo.Financial.moves.insert_one(move_data)
-
-    return jsonify({"message": "Movimentação adicionada com sucesso"}), 201
+        return jsonify({"message": "Movimentação adicionada com sucesso"}), 201
