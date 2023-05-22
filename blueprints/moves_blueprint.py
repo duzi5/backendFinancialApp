@@ -6,59 +6,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-
 moves_blueprint = Blueprint("moves", __name__)
-
 db = mongo.Financial
 moves_collection = db["moves"]
 
 
-def get_month_options(user_id):
-    moves_collection = mongo.Financial.moves
-    month_options = moves_collection.aggregate([
-        {"$match": {"user_id": user_id}},
-        {"$group": {"_id": "reference_month_year"}}
-    ])
-    return [month_option["_id"] for month_option in month_options]
-
-
-@moves_blueprint.route('/month/<referenceMonth>', methods=['GET'])
-@jwt_required()
-def get_moves_by_month(referenceMonth):
-
-    user_id = get_jwt_identity()['user_id']
-
-    # Buscar o usuário no banco de dados MongoDB
-    user = mongo.Financial.users.find_one({'_id': ObjectId(user_id)})
-    family_name = user['family']
-
-    # Buscar a família no banco de dados MongoDB
-    family = mongo.Financial.families.find_one({'name': family_name})
-    family_name = family['name']
-
-    # Buscar movimentos no banco de dados MongoDB
-    moves = mongo.Financial.moves.find({'family_id': family['_id']})
-    print(moves)
-    # Filtrar os movimentos pelo mês de referência
-    filtered_moves = []
-    for move in moves:
-        print(move)
-        if move['reference_month_year'] == referenceMonth:
-            filtered_moves.append(move)
-
-    return jsonify(filtered_moves), 200
-
-
-@moves_blueprint.route('/month-options', methods=['GET'])
-@jwt_required()
-def month_options():
-    user_id = get_jwt_identity()['user_id']
-    month_options = get_month_options(user_id)
-    return jsonify(month_options), 200
-
-
-@jwt_required
 @moves_blueprint.route("/", methods=["GET"])
+@jwt_required
 def get_all_moves():
     moves_cursor = moves_collection.find()
     all_moves = [move for move in moves_cursor]
@@ -66,7 +20,7 @@ def get_all_moves():
 
 
 @jwt_required
-@moves_blueprint.route("/move/<move_id>", methods=["GET"])
+@moves_blueprint.route("/<move_id>", methods=["GET"])
 def get_move(move_id):
     move = moves.find_one({"_id": ObjectId(move_id)})
     if move:
@@ -125,22 +79,8 @@ def create_multiple_moves():
     return jsonify(inserted_ids), 201
 
 
-@moves_blueprint.route("/month/<string:reference_month>", methods=["GET"])
-@jwt_required
-def get_moves_by_month(reference_month):
-    print(reference_month.replace('/', '-'))
-    moves = []
-    for move in moves_collection.find({"reference_month_year": reference_month.replace('/', '-')}):
-        print(move._id)
-        move["_id"] = str(move["_id"])
-        moves.append(move)
-    return jsonify(moves)
-
-
-
-
-@moves_blueprint.route("/add_move", methods=["POST"])
 @jwt_required()
+@moves_blueprint.route("/add_move", methods=["POST"])
 def add_move():
     user_id = get_jwt_identity()["user_id"]
     move_data = request.get_json()
@@ -191,3 +131,50 @@ def add_move():
         move_data["reference_month_year"] = f"{move_data['date'].month}-{move_data['date'].year}"
         mongo.Financial.moves.insert_one(move_data)
         return jsonify({"message": "Movimentação adicionada com sucesso"}), 201
+
+
+@jwt_required
+@moves_blueprint.route("/<string:reference_month_year>/<string:payment_method>", methods=["GET"])
+def get_moves(reference_month_year, payment_method):
+
+    user_id = get_jwt_identity()["user_id"]
+
+    # Filtrar os movimentos do usuário pelo reference_month_year e payment_method
+    filtered_movements = []
+
+    # Lógica para filtrar os movimentos com base no reference_month_year e payment_method
+    cursor = moves_collection.find(
+        {
+            "user_id": user_id,
+            "reference_month_year": reference_month_year,
+            "payment_method": payment_method
+        }
+    )
+
+    for movement in cursor:
+        movement["_id"] = str(movement["_id"])
+        filtered_movements.append(movement)
+
+    return jsonify(filtered_movements)
+
+
+@jwt_required
+@moves_blueprint.route("/month/<string:reference_month>/payment_method/<string:payment_method_id>", methods=["GET"])
+def get_moves_by_month_and_payment_method(reference_month, payment_method_id):
+    moves = []
+    for move in moves_collection.find({"reference_month_year": reference_month.replace('/', '-'), "payment_method_id": payment_method_id}):
+        move["_id"] = str(move["_id"])
+        moves.append(move)
+    return jsonify(moves)
+
+@jwt_required
+@moves_blueprint.route("/month-options/payment_method/<string:payment_method_id>", methods=["GET"])
+def get_month_options_by_payment_method(payment_method_id):
+    month_options = []
+    for move in moves_collection.find({"payment_method_id": payment_method_id}):
+        reference_month_year = move["reference_month_year"]
+        if reference_month_year not in month_options:
+            month_options.append(reference_month_year)
+    return jsonify(month_options)
+
+    
