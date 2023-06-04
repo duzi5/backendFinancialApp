@@ -3,12 +3,11 @@ from datetime import datetime
 from db import mongo
 from bson.objectid import ObjectId
 
-
-family_bp = Blueprint('family_bp', __name__)
 user_collection = mongo.Financial.users
 moves_collection = mongo.Financial.moves
 family_collection = mongo.Financial.families
 
+family_bp = Blueprint('family_bp', __name__)
 
 @family_bp.route('/family', methods=['POST'])
 def create_family():
@@ -18,7 +17,7 @@ def create_family():
         'creation_date': datetime.utcnow(),
         'name': family_data['name'],
         'goals': family_data['goals'],
-        'payment_methods': family_data['payment_methods'],
+        'payment_methods_ids': family_data['payment_methods_ids'],
         'members_ids': family_data['members_ids']
     }
 
@@ -56,7 +55,7 @@ def get_all_families():
     # Converte o ObjectId para uma string
     for family in families:
         family['_id'] = str(family['_id'])
-    print(jsonify(families))
+
     return jsonify(families), 200
 
 
@@ -87,3 +86,34 @@ def get_user_family(user_id):
     family['_id'] = str(family['_id'])
 
     return jsonify(family), 200
+
+@family_bp.route('/family/members/<string:family_id>', methods=['GET'])
+def get_family_members(family_id):
+    try:
+        family = family_collection.find_one({"_id": ObjectId(family_id)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    if family is None:
+        return jsonify({"error": "Family not found"}), 404
+
+    member_ids = family.get("members_ids", [])
+
+    members = []
+    for member_id in member_ids:
+        try:
+            member = user_collection.find_one({"_id": ObjectId(member_id)})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+        if member is not None:
+            member['_id'] = str(member['_id'])  # Convert ObjectId to string
+            members.append(member)
+
+    return jsonify(members), 200
+
+
+
+
+
+

@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 from bson.objectid import ObjectId
 from datetime import datetime
 from db import mongo
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash
 from flask_cors import CORS
 from base64 import b64decode
@@ -13,32 +13,28 @@ import os
 user_blueprint = Blueprint("users", __name__)
 
 db = mongo.Financial
-users_collection = db["users"]
+user_collection = db["users"]
 
 UPLOAD_FOLDER = 'imagens/avatars'
-
-
-
-
-
-@jwt_required
+@jwt_required()
 @user_blueprint.route('/all', methods=['GET'])
 def get_users():
-    users_cursor = mongo.Financial.users.find()
+    users_cursor = user_collection.find()
     users = [user for user in users_cursor]
-
-    response = jsonify(users)
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response, 200
-
-@jwt_required
+    names = []
+    
+    # Convert ObjectId to string
+    for user in users:
+        user['_id'] = str(user['_id'])
+        names.append(user['name'])
+        
+    response = jsonify(names)
+    return response, 200 
+@jwt_required()
 @user_blueprint.route('/users/<user_id>', methods=['GET'])
 def get_user(user_id):
     try:
-        user = users_collection.find_one({'_id': ObjectId(user_id)})
+        user = user_collection.find_one({'_id': ObjectId(user_id)})
         if user:
             response = jsonify(user)
             response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
@@ -51,10 +47,12 @@ def get_user(user_id):
     except InvalidDateDefect:
         return jsonify({'error': 'Invalid user ID'})
 
-@jwt_required
+
+@jwt_required()
 @user_blueprint.route("/", methods=["PUT"])
-def update_user(user_id):
-    users = mongo.Financial.users
+def update_user():
+    user_id = get_jwt_identity()["user_id"]
+    users = user_collection
     user = users.find_one({"_id": ObjectId(user_id)})
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -73,17 +71,15 @@ def update_user(user_id):
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response, 200
 
-@jwt_required
+
+@jwt_required()
 @user_blueprint.route("/", methods=["DELETE"])
-def delete_user(user_id):
+def delete_user():
+    user_id = get_jwt_identity()["user_id"]
     users = mongo.Financial.users
     result = users.delete_one({"_id": ObjectId(user_id)})
     if result.deleted_count == 0:
         return jsonify({"error": "User not found"}), 404
 
     response = jsonify({"_id": user_id})
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response

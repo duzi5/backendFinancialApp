@@ -72,4 +72,3 @@ def get_payment_methods():
         })
 
     return jsonify(payment_methods_list)
-
